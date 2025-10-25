@@ -12,7 +12,9 @@ CONST PSTATE_REPAIR=3
 
 
 DIM Integer Panzer.W=32
+DIM Integer Panzer.Core.W=Panzer.W-8
 DIM Integer Panzer.H=32
+DIM Integer Panzer.Core.H=Panzer.H-4
 DIM Integer Panzer.Sound
 
 DIM Integer Panzer.State(PANZER_MAX)
@@ -59,39 +61,50 @@ sub Panzer.turn(panzer%,angle!)
 end sub
 
 sub Panzer.move(panzer%,delta!)
-  LOCAL float x,y,x1,y1,x2,y2,w,h
-  LOCAL Integer idx
   LOCAL Float rect1(7),rect2(7)
+  LOCAL Float x,y,px,py,cw,ch
+  LOCAL Integer idx
   LOCAL Float d0,d1
 
   x=Panzer.X(panzer%) : y=Panzer.Y(panzer%)
+  cw=Panzer.Core.W : ch=Panzer.Core.H
+
   inc x,cfr(delta!*sin(RAD(Panzer.phi(panzer%))))
   inc y,-cfr(delta!*cos(RAD(Panzer.phi(panzer%))))
 
   'Stop, if playfield borders reached
-  if x<Playfield.X+Panzer.W/2 or x>Playfield.X+Playfield.W-Panzer.W/2 then exit sub
-  if y<Playfield.Y+Panzer.H/2 or y>Playfield.Y+Playfield.H-Panzer.H/2 then exit sub
+  if x<=Playfield.X+Panzer.W/2 or x>Playfield.X+Playfield.W-Panzer.W/2 then exit sub
+  if y<=Playfield.Y+Panzer.H/2 or y>Playfield.Y+Playfield.H-Panzer.H/2 then exit sub
+
+  'Stop, if we bump into a house
+  if Map.objectHit(x,y,Panzer.W,Panzer.H) then exit sub
 
   'Stop, if we bump into another tank
-  w=Panzer.W-8 : h=Panzer.H-4
-  _makeRectangle rect1(),x,y,w,h,RAD(Panzer.phi(panzer%))
-[DBG] _drawRectangle rect1(),map(1)
+  _makeRectangle rect1(),x,y,cw,ch,RAD(Panzer.phi(panzer%))
   for idx=0 to PANZER_MAX-1
     if Panzer.State(idx)=PSTATE_NONE then continue for
     if idx=panzer% then continue for
 
-    d0=_distance(Panzer.X(panzer%),Panzer.Y(panzer%),Panzer.X(idx),Panzer.Y(idx))
-    d1=_distance(x,y,Panzer.X(idx),Panzer.Y(idx))
+    d0=_distance(px,py,Panzer.X(idx),Panzer.Y(idx))
+    d1=_distance( x, y,Panzer.X(idx),Panzer.Y(idx))
 
-    if d1<d0 then      
-      _makeRectangle rect2(),Panzer.X(idx),Panzer.Y(idx),w,h,RAD(Panzer.phi(idx))
-[DBG] _drawRectangle rect2(),map(2)
-      if _doOverlap(rect1(),rect2()) then exit sub
+    if d1<d0 then
+      if Panzer.isCollision(rect1(),idx) then exit sub
     endif
   next
 
   Panzer.X(panzer%)=x : Panzer.Y(panzer%)=y
 end sub
+
+function Panzer.isCollision(rect1!(),idx%) as Integer
+  LOCAL Float rect2(7)
+
+  if Panzer.State(idx%)=PSTATE_NONE then exit function
+
+  _makeRectangle rect2(),Panzer.X(idx%),Panzer.Y(idx%),Panzer.Core.W,Panzer.Core.H,RAD(Panzer.phi(idx%))
+[DBG] _drawRectangle rect2(),map(2)
+  Panzer.isCollision=choice(_doOverlap(rect1!(),rect2()),1,0)
+end function
 
 sub Panzer.cannon(panzer%,angle!)
   LOCAL float phi
@@ -158,7 +171,7 @@ sub Panzer.draw()
       image rotate_fast w*idx,64,w,h,x,y,phi,PAGE_SPRITES,1
     end select
   next
-  _playSound Panzer.Sound
+  Panzer.playSound Panzer.Sound
 end sub
 
 sub Panzer.destroy(idx%)
@@ -256,27 +269,13 @@ function _doOverlap(rect1!(),rect2!()) as Integer
   _doOverlap=overlap
 end function
 
-sub _drawRectangle(rect!(),color%)
-  line rect!(0),rect!(1),rect!(2),rect!(3),1,color%
-  line rect!(2),rect!(3),rect!(4),rect!(5),1,color%
-  line rect!(4),rect!(5),rect!(6),rect!(7),1,color%
-  line rect!(6),rect!(7),rect!(0),rect!(1),1,color%
-end sub
-
-function _distance(x1!,y1!,x2!,y2!) as float
-  LOCAL float dx,dy
-
-  dx=x2!-x1! : dy=y2!-y1!
-  _distance=SQR(dx*dx+dy*dy)
-end function
-
-sub _playSound arg%
+sub Panzer.playSound arg%
   STATIC Float Interval
   STATIC Integer state=0 '=off
 
   if (state=0 and arg%=1) then
     state=1 '=on
-    playSample 5,22050,1
+    playSample 5,11025,1
     Interval=TIMER
 
   elseif (state=1 and arg%=0) then
@@ -284,7 +283,7 @@ sub _playSound arg%
     playSample 14,22050,1
 
   else if (state=1 and TIMER-Interval>5000) then
-    playSample 5,22050,1
+    playSample 5,11025,1
     Interval=TIMER
   endif
 end sub

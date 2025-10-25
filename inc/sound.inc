@@ -2,7 +2,6 @@
 Sub playSample(N%,S%,ch%)
   LOCAL Integer t
 
-  if (Game.State=STATE_INTRO) then exit sub
   if (Game.State=STATE_DEMO) then exit sub
 
   if (ch%>0) then

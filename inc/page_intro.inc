@@ -34,11 +34,8 @@ sub Intro.init()
   Logo.phi=0
 
   mode 8,16
-  page write PAGE_TITLE
-  load png "img/title.png"
   page write PAGE_BUFFER
-
-  playMOD "theme3"
+  playMOD "music"
 end sub
 
 sub Intro.draw()
@@ -70,7 +67,7 @@ sub Intro.draw()
     text cx,cy,"Matthias Grimm","L",4,,rgb(188,186,180) : inc cy,lf
     text cx,cy,"Dominik Braun","L",4,,rgb(188,186,180) : inc cy,lf
     text cx-10,cy,"Music:","R",4,,rgb(89,85,73)
-    text cx,cy,"unknown","L",4,,rgb(188,186,180)
+    text cx,cy,"Songerson","L",4,,rgb(188,186,180)
     line cx-155,cy+15,MM.HRES/2+155,cy+15,1,rgb(168,102,26) : inc cy,lf
     text cx,cy,"Parts of the game Gfx was created with GenAI","C",7,,rgb(109,70,27) : inc cy,10
     text cx,cy,"(c) 2025","C",7,,rgb(109,70,27) : inc cy,15
@@ -100,16 +97,22 @@ function Intro.update() as Integer
 
     select case Intro.state
     case ISTATE_CREDITS
-      if key=32 then Intro.state=ISTATE_PLAYER
+      if key=32 then Intro.state=ISTATE_PLAYER : playMOD "soundfx"
     case ISTATE_PLAYER
       num=Intro.num_players
       if key=32 then num=choice(num<Intro.max_players,num+1,1)
       if key=129 then num=choice(num<Intro.max_players,num+1,num)
       if key=128 then num=choice(num>1,num-1,num)
       if key>48 and key<60 then num=choice(key-48<=Intro.max_players,key-48,num)
+'      if Intro.num_players<>num then playSample 11,22050
+      if Intro.num_players<>num then playSample 1,22050
       Intro.num_players=num
     
-      if key=13 or key=10 then Intro.update=Intro.num_players
+      if key=13 or key=10 then
+        Intro.update=Intro.num_players
+'        playSample 14,22050
+        playSample 2,22050
+      endif
     end select
   else
     lock=0

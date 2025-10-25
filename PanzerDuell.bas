@@ -5,6 +5,8 @@ OPTION DEFAULT NONE
 
 #DEFINE "[DBG]",""  'enable debugging output
 #DEFINE "[NUN]","'"  'enable extra Nunchuk functions, requires nunchuk.inc
+#DEFINE "[MAP]","'"  'enable MAP debugging
+#DEFINE "[DRN]","'"  'enable Drohne debugging
 
 CONST PWD$=getParent$(MM.Info(current))
 
@@ -12,6 +14,7 @@ CONST PWD$=getParent$(MM.Info(current))
 #Include "inc/controls.inc"  'joystick controls
 #Include "inc/settings.inc"
 #Include "inc/cmap.inc"      'colormap functions
+#Include "inc/map.inc"
 #Include "inc/player.inc"
 #Include "inc/panzer.inc"
 #Include "inc/drohne.inc"
@@ -25,8 +28,7 @@ CONST PWD$=getParent$(MM.Info(current))
 #Include "inc/page_config.inc"
 
 game.init()
-
-mode 8  '640x480
+game.loadAssets()
 
 DIM Integer Screen.W=MM.HRES
 DIM Integer Screen.H=MM.VRES
@@ -98,6 +100,7 @@ do
         Panzer.set(2,Playfield.X+Playfield.W-75,Playfield.Y+75,-120)
         Panzer.set(3,Playfield.X+Playfield.W-75,Playfield.Y+Playfield.H-75,-60)
       end select
+      Map.load("lvl/P2_01.map")
       changeState(STATE_GAME)
     endif
 
@@ -154,7 +157,7 @@ do
 
   case STATE_VICTORY
     if one=0 then one=1 : Winner=getWinner() : playSample 8,5512,1
-    if isESC() then changeState(STATE_CONFIG)
+    if isESC() then changeState(STATE_CONFIG) : playSample 14,22050,1
 
     Game.update
     Game.draw
@@ -206,6 +209,11 @@ function isESC() as Integer
     oldKey=Key
     if key=27 then isESC=1 : exit function
     if key=147 then save image "screenshot"+str$(screenshot)+".bmp":inc screenshot 'F3 for screenshot
+    if key=asc("0") then Drohne.state=DROHNE_OFF
+    if key=asc("1") then Drohne.start(Screen.VPx+VP.W/2,Screen.VPy,Panzer.X(0),Panzer.Y(0))
+    if key=asc("2") then Drohne.start(Screen.VPx+VP.W/2,Screen.VPy+VP.H,Panzer.X(0),Panzer.Y(0))
+    if key=asc("3") then Drohne.start(Screen.VPx,Screen.VPy+VP.H/2,Panzer.X(0),Panzer.Y(0))
+    if key=asc("4") then Drohne.start(Screen.VPx+VP.W,Screen.VPy+VP.H/2,Panzer.X(0),Panzer.Y(0))
   endif
 end function
 
@@ -213,7 +221,7 @@ function getWinner() as Integer
   LOCAL Integer player
 
   for player=1 to Game.NumPlayers
-    if Panzer.isActive(player-1) then getWinner=player
+    if Player.isActive(player) then getWinner=player
   next
 end function
 

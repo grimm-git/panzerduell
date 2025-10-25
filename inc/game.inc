@@ -12,11 +12,15 @@ CONST STATE_OVER=7
 CONST STATE_CUTSCENE=8
 CONST STATE_VICTORY=9
 
-CONST PAGE_DISPLAY=0
-CONST PAGE_BUFFER=1
-CONST PAGE_BACK=2
-CONST PAGE_SPRITES=3
-CONST PAGE_TITLE=4
+'Memory Management      8Bit                16Bit
+CONST PAGE_DISPLAY=0   '$24000000-$2404AFFF $D0000000-$D0095FFF
+CONST PAGE_TITLE=2     '                    $D012C000-$D01C1FFF
+CONST PAGE_BUFFER=3    '$D0098000-$D00E2FFF $D01C2000-$D0257FFF
+CONST PAGE_PLAYFIELD=9 '$D0260000-$D02AAFFF   assembled background
+CONST PAGE_SPRITES=10  '$ 
+CONST PAGE_TILESET=11  '$ 
+CONST PAGE_BACKGND=12  '$D0344000-$D038EFFF   clean background
+CONST PAGE_DEVICES=7   '                    $D041A000-$D04AFFFF
 
 
 DIM Integer Game.State      ' Default=STATE_INTRO
@@ -46,11 +50,22 @@ sub Game.init()
 end sub
 
 sub Game.loadAssets()
+  LOCAL Integer n
+  
+  mode 8,8
   load data "img/sprites.raw",MM.Info(page address PAGE_SPRITES)
-  load data "img/playfield.raw",MM.Info(page address PAGE_BACK)
+  load data "img/playfield.raw",MM.Info(page address PAGE_BACKGND)
+  load data "img/tileset.raw",MM.Info(page address PAGE_TILESET)
+  for n=0 to NUMTILES-1: Map.Masks(n)=Map.calcTileMask(n):next
+
   cmap.init
   cmap.load "img/colors.cmap"
-  cmap.activate
+
+  mode 8,16
+  page write PAGE_TITLE
+  load png "img/title.png"
+  page write PAGE_DEVICES
+  load png "img/devices.png"
 end sub
 
 sub Game.new
@@ -60,11 +75,17 @@ end sub
 sub Game.start
   mode 8,8
 
-  page display PAGE_DISPLAY
-  page write PAGE_BUFFER
-  Game.loadAssets
   playMOD "soundfx"
   Particle.init
+  Drohne.init
+
+  cmap.activate
+  page write PAGE_PLAYFIELD
+  blit 0,0,0,0,640,480,PAGE_BACKGND,0
+  Map.draw
+  page write PAGE_BUFFER
+  page display PAGE_DISPLAY
+
   Game.Ready=1
 end sub
 
@@ -73,7 +94,7 @@ sub Game.clrScreen
   if Game.State=STATE_INTRO or Game.STATE=STATE_CONFIG then
     cls
   else
-    blit 0,0,0,0,640,480,PAGE_BACK,0
+    blit 0,0,0,0,640,480,PAGE_PLAYFIELD,0
     Game.drawDashboard
   endif
 end sub

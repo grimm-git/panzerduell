@@ -37,11 +37,10 @@ sub Shots.update()
     inc Shots.Y(s),cfr(Shots.dY(s))
 
     x=Shots.X(s) : y=Shots.Y(s)
-'    hit=Map.bulletHit(x,y)
-
-    if _hitWall(x,y) then
+    if _hitWall(x,y) or Map.bulletHit(x,y) then
       Emitter.shot(x,y)
       _terminateShot(s)
+      playSample 15,22050
     elseif isVisible(x,y) then
       pixel x,y,map(WHITE)
       pixel x,y-1,map(WHITE)
@@ -67,7 +66,6 @@ function _hitWall(x!,y!) as Integer
   if y!<Playfield.Y-10 or y!>Playfield.Y+Playfield.H+10 then goto out
   exit function
 out:
-  playSample 15,22050
   _hitWall=1
 end function
 

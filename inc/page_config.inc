@@ -40,9 +40,6 @@ sub Config.init(players%)
   Config.State(0)=CSTATE_INPUT  'Start input phase for player 1
 
   mode 8,16
-  page write PAGE_SPRITES
-  load png "img/devices.png"
-  page write PAGE_BUFFER
 end sub
 
 sub Config.reset
@@ -56,9 +53,7 @@ sub Config.reset
     Config.keylock=0
   next
 
-  mode 8,16 : cls
-  page write PAGE_SPRITES
-  load png "img/devices.png"
+  mode 8,16
   page write PAGE_BUFFER
 end sub
 
@@ -81,7 +76,7 @@ sub Config.draw()
     inpch=Player.getInpch(idx+1)
     if inpch>=0 then
       dev=Controls.getType(inpch)
-      blit dev*128,0,cx-64,cy,128,128,PAGE_SPRITES,&B100
+      blit dev*128,0,cx-64,cy,128,128,PAGE_DEVICES,&B100
       inc cy,128
     endif
 
@@ -191,6 +186,7 @@ function Config.update() as Integer
         if Player.setInpch(idx+1,inpch)=1 then
           _initTransition(idx,CSTATE_MENU)
           if idx+1<Config.numPLayers then Config.State(idx+1)=CSTATE_INPUT
+          playSample 2,22050
         endif
       endif
 
@@ -283,11 +279,11 @@ sub _drawBusyACC(cx!,cy!,mask%)
   LOCAL Integer d
 
   d=choice(mask% and &B100,48,0)
-  blit 512+d, 0,cx!-80,cy!-21,48,43,PAGE_SPRITES,&B100   'x
+  blit 512+d, 0,cx!-80,cy!-21,48,43,PAGE_DEVICES,&B100   'x
   d=choice(mask% and &B010,48,0)
-  blit 512+d,43,cx!-24,cy!-21,48,43,PAGE_SPRITES,&B100   'y
+  blit 512+d,43,cx!-24,cy!-21,48,43,PAGE_DEVICES,&B100   'y
   d=choice(mask% and &B001,48,0)
-  blit 512+d,86,cx!+32,cy!-21,48,43,PAGE_SPRITES,&B100   'z
+  blit 512+d,86,cx!+32,cy!-21,48,43,PAGE_DEVICES,&B100   'z
 end sub
 
 function _isControlBusy(idx%) as Integer
@@ -312,9 +308,17 @@ function _handleMainMenu(idx%) as Integer
 
   ctrl=Controls.read(inpch)
   if (ctrl and 4) > 0 then  'up
-    if Controls.getTime(inpch,CTRL_UP)<=1 then inc cursor,-1 : if cursor<0 then cursor=curmax
+    if Controls.getTime(inpch,CTRL_UP)<=1 then
+      inc cursor,-1
+      if cursor<0 then cursor=curmax
+      playSample 1,22050
+     endif
   elseif (ctrl and 8) > 0 then 'down
-    if Controls.getTime(inpch,CTRL_DOWN)<=1 then inc cursor : if cursor>curmax then cursor=0
+    if Controls.getTime(inpch,CTRL_DOWN)<=1 then
+      inc cursor
+      if cursor>curmax then cursor=0
+      playSample 1,22050
+    endif
   elseif (ctrl and 16) > 0 then 'select
     if Controls.getTime(inpch,CTRL_FIRE)<=1 then
       if cursor=0 then
@@ -324,6 +328,7 @@ function _handleMainMenu(idx%) as Integer
       elseif cursor=2 then
         _handleMainMenu=CSTATE_MRKEY
       endif
+      playSample 2,22050
     endif
   endif
 

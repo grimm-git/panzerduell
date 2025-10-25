@@ -68,7 +68,7 @@ end sub
 sub cmap.set(reg%,color%)
   cmap.clut(reg%)=color% AND &HFFFFFF
   cmap.custom(reg%)=1
-  map(reg%)=cmap.clut(reg%)
+'  map(reg%)=cmap.clut(reg%)
 end sub
 
 sub cmap.setRGB(reg%,R%,G%,B%)
@@ -84,10 +84,6 @@ function cmap.isCustom(reg%) as Integer
 end function
 
 sub cmap.activate
-  if cmap.cmode=8 then map set
-end sub
-
-sub cmap.reactivate
   LOCAL Integer t
   
   if cmap.cmode<>8 then exit sub
