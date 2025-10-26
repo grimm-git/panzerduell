@@ -15,6 +15,7 @@ CONST PWD$=getParent$(MM.Info(current))
 #Include "inc/settings.inc"
 #Include "inc/cmap.inc"      'colormap functions
 #Include "inc/map.inc"
+#Include "inc/level.inc"
 #Include "inc/player.inc"
 #Include "inc/panzer.inc"
 #Include "inc/drohne.inc"
@@ -84,23 +85,7 @@ do
 
     Config.draw
     if Config.update()=1 then
-      select case Game.NumPlayers
-      case 1 
-        Panzer.set(0,Playfield.X+75,Playfield.Y+Playfield.H/2,90)
-      case 2
-        Panzer.set(0,Playfield.X+75,Playfield.Y+Playfield.H/2,90)
-        Panzer.set(1,Playfield.X+Playfield.W-75,Playfield.Y+Playfield.H/2,-90)
-      case 3
-        Panzer.set(0,Playfield.X+75,Playfield.Y+Playfield.H/2,90)
-        Panzer.set(1,Playfield.X+Playfield.W-75,Playfield.Y+75,-120)
-        Panzer.set(2,Playfield.X+Playfield.W-75,Playfield.Y+Playfield.H-75,-60)
-      case 4
-        Panzer.set(0,Playfield.X+75,Playfield.Y+75,120)
-        Panzer.set(1,Playfield.X+75,Playfield.Y+Playfield.H-75,60)
-        Panzer.set(2,Playfield.X+Playfield.W-75,Playfield.Y+75,-120)
-        Panzer.set(3,Playfield.X+Playfield.W-75,Playfield.Y+Playfield.H-75,-60)
-      end select
-      Map.load("lvl/P2_01.map")
+      Level.load(Game.NumPlayers)
       changeState(STATE_GAME)
     endif
 
