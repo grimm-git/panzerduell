@@ -97,20 +97,18 @@ function Intro.update() as Integer
 
     select case Intro.state
     case ISTATE_CREDITS
-      if key=32 then Intro.state=ISTATE_PLAYER : playMOD "soundfx"
+      if key=32 then Intro.state=ISTATE_PLAYER : playMOD "keysound"
     case ISTATE_PLAYER
       num=Intro.num_players
       if key=32 then num=choice(num<Intro.max_players,num+1,1)
       if key=129 then num=choice(num<Intro.max_players,num+1,num)
       if key=128 then num=choice(num>1,num-1,num)
       if key>48 and key<60 then num=choice(key-48<=Intro.max_players,key-48,num)
-'      if Intro.num_players<>num then playSample 11,22050
       if Intro.num_players<>num then playSample 1,22050
       Intro.num_players=num
     
       if key=13 or key=10 then
         Intro.update=Intro.num_players
-'        playSample 14,22050
         playSample 2,22050
       endif
     end select

@@ -7,10 +7,15 @@ CONST MAPOFFSET_Y=6
 CONST TILESPERROW=40
 CONST NUMTILES=TILESPERROW*15
 
+CONST MAP_OBJECTSMAX=20
+
 DIM Integer Map.W=37
 DIM Integer Map.H=21
 DIM Integer Map.map(Map.W,Map.H)
 DIM Integer Map.Masks(NUMTILES)
+
+DIM Float   Map.Obj(MAP_OBJECTSMAX,3)
+DIM Integer Map.Obj.next
 
 'Load the level map and stores it in Level.Map
 sub Map.load(name$)
@@ -38,6 +43,17 @@ sub Map.load(name$)
   close #1
 
   if tmp$<>"" then Map.map(c%,r%)=val(tmp$)
+  Map.Obj.next=0
+end sub
+
+sub Map.addObject(x!,y!,w%,h%)
+  if Map.Obj.next<MAP_OBJECTSMAX-1 then
+    Map.Obj(Map.Obj.next,0)=Map.toScrX(x!)
+    Map.Obj(Map.Obj.next,1)=Map.toScrY(y!)
+    Map.Obj(Map.Obj.next,2)=w%
+    Map.Obj(Map.Obj.next,3)=h%
+    inc Map.Obj.next
+  endif
 end sub
 
 sub Map.draw()
@@ -58,6 +74,10 @@ sub Map.draw()
   next
 
 [MAP] frame(Playfield.X+MAPOFFSET_X,Playfield.Y+MAPOFFSET_Y,MAP.W*MAPTILESIZE,MAP.H*MAPTILESIZE)
+[MAP] LOCAL Integer n
+[MAP] for n=0 to Map.Obj.next-1
+[MAP]  frame(Map.Obj(n,0),Map.Obj(n,1),Map.Obj(n,2),Map.Obj(n,3))
+[MAP] next
 
   PAGE write PAGE_BUFFER
 end sub
@@ -75,51 +95,25 @@ sub Map.putTile(idx%,c%,r%)
   PAGE write PAGE_BUFFER
 end sub
 
-' x,y = playfield coordinates
-function Map.objectHit(x!,y!,w%,h%,px!,py!) as Integer
-  LOCAL Integer tx,_tx,ty,_ty,tile,mask
-  LOCAL Float _x,_y
-  LOCAL Integer z,rc
+function Map.hitByPanzer(rect1!(),nx!,ny!,px!,py!) as Integer
+  LOCAL Float rect2!(7),pd,nd,onx,ony
+  LOCAL Integer n
 
-  _x=Map.toMapX(x!-w%/2)
-  tx=int(_x/MAPTILESIZE) : if tx<0 then tx=0
-
-  _y=mAP.toMapY(y!-h%/2)
-  ty=int(_y/MAPTILESIZE) : if ty<0 then ty=0
-
-[MAP] LOCAL Float dx,dy,hx,hy
-[MAP] frame (x!-w%/2,y!-h%/2,w%,h%)
-[MAP] hy=Map.toScrY(ty*MAPTILESIZE)-12
-[MAP] hx=Map.toScrX(tx*MAPTILESIZE)-12
-
-  _ty=ty  
-  do
-    _tx=tx
-    do
-      tile=Map.map(_tx,_ty)
-
-[MAP] dx=Map.toScrX(_tx*MAPTILESIZE)
-[MAP] dy=Map.toScrY(_ty*MAPTILESIZE)
-[MAP] frame (dx,dy,MAPTILESIZE,MAPTILESIZE)
-[MAP] text dx+8,dy+6,str$(tile),"C",7
-[MAP] text hx,dy+6,str$(_ty),"C",7
-[MAP] text dx+8,hy,str$(_tx),"C",7
-
-      if tile>0 then
-        mask=Map.calcMask(_tx,_ty,_x,_y,choice(w%=0,4,w%),h%)
-        if mask AND Map.Masks(tile) then Map.objectHit=1 : exit function
-      endif
-
-      inc _ty : if _ty>=MAP.H then exit do
-    loop while _y+h%>_ty*MAPTILESIZE
-    _ty=ty
-    inc tx : if tx>=MAP.W then exit do
-  loop while _x+w%>tx*MAPTILESIZE
-  Map.objectHit=0
+  for n=0 to Map.Obj.next-1
+    onx=Map.Obj(n,0)+Map.Obj(n,2)/2
+    ony=Map.Obj(n,1)+Map.Obj(n,3)/2
+    pd=_distance(px!,py!,onx,ony)
+    nd=_distance(nx!,ny!,onx,ony)
+    if pd>nd then
+      _makeRectangle(rect2!(),onx,ony,Map.Obj(n,2),Map.Obj(n,3),0)
+[MAP] _drawRectangle rect2!(),map(4)
+      if _doOverlap(rect1!(),rect2!()) then Map.hitByPanzer=1 : exit for
+    endif
+  next
 end function
 
 ' x,y = playfield coordinates
-function Map.bulletHit(x!,y!) as Integer
+function Map.hitByBullet(x!,y!) as Integer
   LOCAL Integer tx,ty,tile,mask
   LOCAL Float _x,_y
 
@@ -127,17 +121,10 @@ function Map.bulletHit(x!,y!) as Integer
   tx=int(_x/MAPTILESIZE) : if tx<0 or tx>MAP.W then exit function
   ty=int(_y/MAPTILESIZE) : if ty<0 or ty>MAP.H then exit function
   tile=Map.map(tx,ty)    : if tile<=0 then exit function
-
-[MAP] LOCAL Float dx,dy
-[MAP] frame (x!,y!,4,4)
-[MAP] dx=Map.toScrX(tx*MAPTILESIZE)
-[MAP] dy=Map.toScrY(ty*MAPTILESIZE)
-[MAP] frame (dx,dy,MAPTILESIZE,MAPTILESIZE)
-[MAP] text dx+8,dy+6,str$(tile),"C",7
       
   mask=Map.calcMask(tx,ty,_x,_y,4,0)
   if mask AND Map.Masks(tile) then
-    Map.bulletHit=1
+    Map.hitByBullet=1
     exit function
   endif
 end function

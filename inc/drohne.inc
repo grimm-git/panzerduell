@@ -82,7 +82,7 @@ sub Drohne.update()
         endif
       next
 
-      Explosion.add(Drohne.X,Drohne.Y,2)
+      Explosion.add Drohne.X,Drohne.Y,2,EX_TYPE_SMALL
       exit sub
     else if t>0.9 then
       Drohne.State=DROHNE_LOW

@@ -64,10 +64,11 @@ sub Panzer.move(panzer%,delta!)
   LOCAL Float rect1(7),rect2(7)
   LOCAL Float x,y,px,py,cw,ch
   LOCAL Integer idx
-  LOCAL Float d0,d1
+  LOCAL Float pd,nd
 
   x=Panzer.X(panzer%) : y=Panzer.Y(panzer%)
   cw=Panzer.Core.W : ch=Panzer.Core.H
+  px=x : py=y
 
   inc x,cfr(delta!*sin(RAD(Panzer.phi(panzer%))))
   inc y,-cfr(delta!*cos(RAD(Panzer.phi(panzer%))))
@@ -76,34 +77,31 @@ sub Panzer.move(panzer%,delta!)
   if x<=Playfield.X+Panzer.W/2 or x>Playfield.X+Playfield.W-Panzer.W/2 then exit sub
   if y<=Playfield.Y+Panzer.H/2 or y>Playfield.Y+Playfield.H-Panzer.H/2 then exit sub
 
+  _makeRectangle rect1(),x,y,cw,ch,RAD(Panzer.phi(panzer%))
+[DBG] _drawRectangle rect1(),map(1)
+
   'Stop, if we bump into a house
-  if Map.objectHit(x,y,Panzer.W,Panzer.H) then exit sub
+  if Map.hitByPanzer(rect1(),x,y,px,py) then exit sub
 
   'Stop, if we bump into another tank
-  _makeRectangle rect1(),x,y,cw,ch,RAD(Panzer.phi(panzer%))
   for idx=0 to PANZER_MAX-1
     if Panzer.State(idx)=PSTATE_NONE then continue for
     if idx=panzer% then continue for
 
-    d0=_distance(px,py,Panzer.X(idx),Panzer.Y(idx))
-    d1=_distance( x, y,Panzer.X(idx),Panzer.Y(idx))
-
-    if d1<d0 then
-      if Panzer.isCollision(rect1(),idx) then exit sub
-    endif
+    pd=_distance(px,py,Panzer.X(idx),Panzer.Y(idx))
+    nd=_distance( x, y,Panzer.X(idx),Panzer.Y(idx))
+    if nd<pd then if Panzer.hitByPanzer(rect1(),idx) then exit sub
   next
 
   Panzer.X(panzer%)=x : Panzer.Y(panzer%)=y
 end sub
 
-function Panzer.isCollision(rect1!(),idx%) as Integer
-  LOCAL Float rect2(7)
+function Panzer.hitByPanzer(rect1!(),idx%) as Integer
+  LOCAL Float rect2!(7)
 
-  if Panzer.State(idx%)=PSTATE_NONE then exit function
-
-  _makeRectangle rect2(),Panzer.X(idx%),Panzer.Y(idx%),Panzer.Core.W,Panzer.Core.H,RAD(Panzer.phi(idx%))
-[DBG] _drawRectangle rect2(),map(2)
-  Panzer.isCollision=choice(_doOverlap(rect1!(),rect2()),1,0)
+  _makeRectangle rect2!(),Panzer.X(idx%),Panzer.Y(idx%),Panzer.Core.W,Panzer.Core.H,RAD(Panzer.phi(idx%))
+[DBG] _drawRectangle rect2!(),map(2)
+  Panzer.hitByPanzer=choice(_doOverlap(rect1!(),rect2!()),1,0)
 end function
 
 sub Panzer.cannon(panzer%,angle!)
@@ -175,8 +173,12 @@ sub Panzer.draw()
 end sub
 
 sub Panzer.destroy(idx%)
-  Explosion.add Panzer.X(idx%),Panzer.Y(idx%)
-  Panzer.State(idx%)=PSTATE_DESTROYED
+  if Panzer.State(idx%)=PSTATE_DESTROYED then
+    Explosion.add Panzer.X(idx%),Panzer.Y(idx%),,EX_TYPE_SMALL
+  else
+    Explosion.add Panzer.X(idx%),Panzer.Y(idx%),,EX_TYPE_BIG
+    Panzer.State(idx%)=PSTATE_DESTROYED
+  endif
 end sub
 
 function Panzer.isHit(x!,y!) as Integer

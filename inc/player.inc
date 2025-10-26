@@ -13,7 +13,7 @@ DIM Integer Player.lives(PLAYER_MAX)
 DIM Integer Player.kills(PLAYER_MAX)
 DIM Integer Player.col32(PLAYER_MAX)    'RGB value of color
 DIM Integer Player.col08(PLAYER_MAX)    'Color register of CLUT
-
+DIM Integer Player.robot(PLAYER_MAX)
 
 sub Player.init()
   Player.reset
@@ -26,11 +26,12 @@ sub Player.reset()
   
   for idx=0 to PLAYER_MAX-1
     Player.state(idx)=PLAYER_NONE
-    Player.inpch(idx)=-1   'not set yet
+    Player.inpch(idx)=-1 'not set yet
     Player.lives(idx)=5
     Player.kills(idx)=0
     Player.col32(idx)=Col32(idx mod 7)
     Player.col08(idx)=Col08(idx mod 7)
+    Player.robot(idx)=0  'human player
   next
 end sub
 
@@ -120,4 +121,13 @@ function Player.active() as Integer
   next  
   Player.active=n
 end function
+
+'player% = 1..
+sub Player.setRobot(player%)
+  LOCAL Integer idx=player%-1
+
+  Player.robot(idx)=1
+  Player.state(idx)=PLAYER_ACTIVE
+end sub
+
 
