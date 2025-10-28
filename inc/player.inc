@@ -8,12 +8,12 @@ CONST PLAYER_ACTIVE=1
 CONST PLAYER_DEAD=2
 
 DIM Float   Player.state(PLAYER_MAX)
-DIM Integer Player.inpch(PLAYER_MAX)    'Input channel from controls.inc
+DIM Integer Player.inpch(PLAYER_MAX)  'Input channel from controls.inc
 DIM Integer Player.lives(PLAYER_MAX)
 DIM Integer Player.kills(PLAYER_MAX)
-DIM Integer Player.col32(PLAYER_MAX)    'RGB value of color
-DIM Integer Player.col08(PLAYER_MAX)    'Color register of CLUT
-DIM Integer Player.robot(PLAYER_MAX)
+DIM Integer Player.col32(PLAYER_MAX)  'RGB value of color
+DIM Integer Player.col08(PLAYER_MAX)  'Color register of CLUT
+DIM Integer Player.robot(PLAYER_MAX)  'Human or AI controlled
 
 sub Player.init()
   Player.reset
@@ -40,7 +40,8 @@ sub Player.newgame()
   
   for idx=0 to PLAYER_MAX-1
     if Player.state(idx)=PLAYER_DEAD then Player.state(idx)=PLAYER_ACTIVE
-    Player.lives(idx)=1
+    Player.lives(idx)=5
+[DBG] Player.lives(idx)=1
     Player.kills(idx)=0
   next
 end sub
@@ -112,6 +113,19 @@ end function
 sub Player.incKills(player%)
   inc Player.kills(player%-1)
 end sub
+
+function Player.getWinner() as Integer
+  LOCAL Integer idx,winner=-1
+
+  for idx=0 to PLAYER_MAX-1
+    if Player.State(idx)=PLAYER_ACTIVE then
+      if winner<>-1 then exit function
+      winner=idx
+    endif
+  next
+  playSample 8,5512,1
+  Player.getWinner=winner+1
+end function
 
 function Player.active() as Integer
   LOCAL Integer idx,n

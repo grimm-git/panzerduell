@@ -10,16 +10,16 @@ DIM Integer Drohne.W=23
 DIM Integer Drohne.H=23
 
 DIM Integer Drohne.State
-DIM Float Drohne.X
-DIM Float Drohne.Y
-DIM Float Drohne.phi      'in DEG
-DIM Float Drohne.targetX
-DIM Float Drohne.targetY
-DIM Float Drohne.tiAnim
+DIM Float   Drohne.X
+DIM Float   Drohne.Y
+DIM Float   Drohne.phi      'in DEG
+DIM Float   Drohne.targetX
+DIM Float   Drohne.targetY
+DIM Float   Drohne.tiAnim
 
-DIM Float Drohne.dt
-DIM Float Drohne.Px(3)
-DIM Float Drohne.Py(3)
+DIM Float   Drohne.dt
+DIM Float   Drohne.Px(3)  'Bezier curve 3rd degree
+DIM Float   Drohne.Py(3)
 
 
 sub Drohne.init()
@@ -27,19 +27,24 @@ sub Drohne.init()
 end sub
 
 'Start Drohne on an autonomous flight to target (x2!,y2!)
-sub Drohne.start(x1!,y1!,x2!,y2!)
+sub Drohne.start(x2!,y2!)
+  STATIC Float sx(3)=(Screen.VPx+VP.W/2,Screen.VPx+VP.W/2,Screen.VPx,Screen.VPx+VP.W)
+  STATIC Float sy(3)=(Screen.VPy,Screen.VPy+VP.H,Screen.VPy+VP.H/2,Screen.VPy+VP.H/2)
+  LOCAL Float x1,y1
   LOCAL Float nx,ny,nl
   LOCAL Float a,b,d,s
+  LOCAL Integer idx
 
   if Drohne.state=DROHNE_OFF then
-    if x2!=x1! then inc x2!,0.00001 'avoid division by zero
+    idx=int(RND()*4) : x1=sx(idx) : y1=sy(idx)  'random start position
+
+    if x2!=x1! then inc x1!,0.00001 'prevent division by zero
     nx=y1!-y2! : ny=x2!-x1! : nl=SQR(nx*nx+ny*ny)
     nx=nx/nl   : ny=ny/nl 'Normed normal vector
     
     Drohne.dt=3/_distance(x1!,y1!,x2!,y2!)
 
-    a=(y2!-y1!)/(x2!-x1!) : b=y1!-a*x1!
-    d=(x2!-x1!)/3
+    a=(y2!-y1!)/(x2!-x1!) : b=y1!-a*x1! : d=(x2!-x1!)/3
     s=choice(y1!<Screen.VPy+VP.H/2,-1,1)  
 
     Drohne.Px(0)= x1! : Drohne.Py(0)=y1! 'start
@@ -74,7 +79,7 @@ sub Drohne.update()
 
       _makeRectangle rect(),Drohne.X,Drohne.Y,Drohne.W,Drohne.H,RAD(Drohne.phi)
       for idx=0 to PANZER_MAX-1
-        if Panzer.isCollision(rect(),idx) then
+        if Panzer.hitByPanzer(rect(),idx) then
           playSample 14,22050,2
           Panzer.destroy idx
           Player.kill idx+1
@@ -94,17 +99,6 @@ sub Drohne.update()
     x=_bezier_x(t+Drohne.dt)
     y=_bezier_y(t+Drohne.dt)
     Drohne.phi=atan2(x-Drohne.X,-(y-Drohne.Y))/PI*180
-    
-'    if Drohne.State=DROHNE_LOW then
-'      _makeRectangle rect(),Drohne.X,Drohne.Y,Drohne.W,Drohne.H,RAD(Drohne.phi)
-'      for idx=0 to PANZER_MAX-1
-'        if Panzer.State(idx)=PSTATE_NONE then continue for
-'        if Panzer.isCollision(rect(),idx) then
-'          t=0 : Drohne.destroy()
-'          Panzer.destroy idx
-'        endif
-'      next
-'    endif
   endif
 end sub
 

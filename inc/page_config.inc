@@ -19,7 +19,7 @@ CONST CSTATE_MCACCE=&H224
 CONST CSTATE_START =&H300
 
 DIM Integer Config.numPlayers
-DIM Integer Config.State(CONFIG_MAXPLAYER-1)     'ATTENTION: Limited to max 4 players
+DIM Integer Config.State(CONFIG_MAXPLAYER-1)
 DIM Integer Config.trans(CONFIG_MAXPLAYER-1)
 DIM Integer Config.transtime(CONFIG_MAXPLAYER-1)
 DIM Integer Config.cursor(CONFIG_MAXPLAYER-1)
@@ -186,7 +186,7 @@ function Config.update() as Integer
         if Player.setInpch(idx+1,inpch)=1 then
           _initTransition(idx,CSTATE_MENU)
           if idx+1<Config.numPLayers then Config.State(idx+1)=CSTATE_INPUT
-          playSample 2,22050
+          playSample 2,30000
         endif
       endif
 
@@ -195,8 +195,12 @@ function Config.update() as Integer
       if newstate>0 then _initTransition(idx,newstate) : Config.cursor(idx)=0
 
     case CSTATE_MSKEY
-      key=Controls.inKey()
-      if key=10 then _initTransition(idx,CSTATE_MENU)
+      inpch=Player.getInpch(idx+1)
+      ctrl=Controls.read(inpch)
+      if ctrl<>0 then
+        playSample 2,30000
+        _initTransition(idx,CSTATE_MENU)
+      endif
 
     case CSTATE_MRKEY
       Config.keylock=1
@@ -240,7 +244,6 @@ function Config.update() as Integer
       mask=Nunchuk.calibrateACC(dev)
       if mask=&B111 then
         Config.trans(idx%)=CSTATE_MENU
-'        Config.trans(idx%)=CSTATE_DEBUG
         Config.state(idx%)=CSTATE_MCACCE
       endif
 
@@ -328,7 +331,7 @@ function _handleMainMenu(idx%) as Integer
       elseif cursor=2 then
         _handleMainMenu=CSTATE_MRKEY
       endif
-      playSample 2,22050
+      playSample 2,30000
     endif
   endif
 

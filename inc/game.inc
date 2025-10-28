@@ -27,16 +27,13 @@ DIM Integer Game.State      ' Default=STATE_INTRO
 DIM Integer Game.Ready
 DIM Integer Game.Level      ' levels start with 1
 DIM Integer Game.Requests   ' bitfield
-DIM Float   Game.frameTimer
-DIM Float   Game.gameTimer
 DIM Integer Game.NumPlayers
 DIM Float   Game.frameTime=1
+DIM Float   Game.frameTimer
 
-DIM Float   DBG.updateTime
-
+[DBG] DIM Float   DBG.updateTime
 
 sub Game.init()
-  Game.gameTimer=TIMER
   Game.Ready=0
 
   Controls.init
@@ -147,12 +144,10 @@ sub Game.swapPage
 [DBG] DBG.updateTime=TIMER-Game.frameTimer
 [DBG] Game.showFPS
   page copy PAGE_BUFFER to PAGE_DISPLAY,B
-[DBG] Game.frameTime=TIMER-Game.frameTimer
+  Game.frameTime=TIMER-Game.frameTimer
 end sub
 
 Sub Game.showFPS
-  LOCAL Integer gameTime=TIMER-Game.gameTimer
-  text SCREEN.W-6, 7,str$(int(gameTime/10))+"0","R",7,,,-1
   text SCREEN.W-6,17,str$(int(1000/Game.frameTime)),"R",7,,,-1
   text SCREEN.W-6,27,str$(int(DBG.updateTime*10)/10,2,2)+"ms","R",7,,,-1
   text SCREEN.W-6,39,str$(cfr(1),2,2),"R",7,,,-1

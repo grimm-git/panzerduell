@@ -24,6 +24,7 @@ DIM Float Panzer.phi(PANZER_MAX)
 DIM Float Panzer.turm(PANZER_MAX)
 DIM Float Panzer.tiReload(PANZER_MAX)
 DIM Float Panzer.tiRepair(PANZER_MAX)
+DIM Float Panzer.tiStill(PANZER_MAX)
 DIM Float Panzer.cycle(PANZER_MAX)
 
 
@@ -39,16 +40,18 @@ sub Panzer.init()
     Panzer.turm(idx)=0
     Panzer.tiReload(idx)=0
     Panzer.tiRepair(idx)=0
+    Panzer.tiStill(idx)=0
     Panzer.cycle(idx)=1
   next
 end sub
 
 sub Panzer.set(panzer%,x!,y!,phi!)
-    Panzer.State(panzer%)=PSTATE_ACTIVE
-    Panzer.X(panzer%)=x!
-    Panzer.Y(panzer%)=y!
-    Panzer.phi(panzer%)=phi!
-    Panzer.turm(panzer%)=0
+  Panzer.State(panzer%)=PSTATE_ACTIVE
+  Panzer.X(panzer%)=x!
+  Panzer.Y(panzer%)=y!
+  Panzer.phi(panzer%)=phi!
+  Panzer.turm(panzer%)=0
+  Panzer.tiStill(panzer%)=TIMER
 end sub
 
 sub Panzer.turn(panzer%,angle!)
@@ -78,7 +81,6 @@ sub Panzer.move(panzer%,delta!)
   if y<=Playfield.Y+Panzer.H/2 or y>Playfield.Y+Playfield.H-Panzer.H/2 then exit sub
 
   _makeRectangle rect1(),x,y,cw,ch,RAD(Panzer.phi(panzer%))
-[DBG] _drawRectangle rect1(),map(1)
 
   'Stop, if we bump into a house
   if Map.hitByPanzer(rect1(),x,y,px,py) then exit sub
@@ -93,6 +95,7 @@ sub Panzer.move(panzer%,delta!)
     if nd<pd then if Panzer.hitByPanzer(rect1(),idx) then exit sub
   next
 
+  Panzer.tiStill(panzer%)=TIMER
   Panzer.X(panzer%)=x : Panzer.Y(panzer%)=y
 end sub
 
@@ -100,7 +103,6 @@ function Panzer.hitByPanzer(rect1!(),idx%) as Integer
   LOCAL Float rect2!(7)
 
   _makeRectangle rect2!(),Panzer.X(idx%),Panzer.Y(idx%),Panzer.Core.W,Panzer.Core.H,RAD(Panzer.phi(idx%))
-[DBG] _drawRectangle rect2!(),map(2)
   Panzer.hitByPanzer=choice(_doOverlap(rect1!(),rect2!()),1,0)
 end function
 
@@ -139,6 +141,7 @@ sub Panzer.draw()
     select case Panzer.State(idx)
     case PSTATE_ACTIVE
       img=0
+      if TIMER-Panzer.tiStill(idx)>60000 then Drohne.start Panzer.X(idx),Panzer.Y(idx)
     case PSTATE_DESTROYED
       img=1
     case PSTATE_REPAIR
@@ -150,6 +153,7 @@ sub Panzer.draw()
 
         if Panzer.cycle(idx)>PANZER_REPAIRTIME/PANZER_REPAIRSTEP then
           Panzer.State(idx)=PSTATE_ACTIVE
+          Panzer.tiStill(idx)=TIMER
           for n=0 to 7
             Shots.fire(idx,Panzer.X(idx),Panzer.Y(idx),RND()*20+n*45-10)
           next

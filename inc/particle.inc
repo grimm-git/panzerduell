@@ -1,5 +1,5 @@
 
-CONST PARTICLE_MAX=600
+CONST PARTICLE_MAX=800
 
 DIM Integer Particle.next
 

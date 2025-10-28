@@ -3,7 +3,7 @@ OPTION BASE 0
 OPTION EXPLICIT
 OPTION DEFAULT NONE
 
-#DEFINE "[DBG]",""  'enable debugging output
+#DEFINE "[DBG]","'"  'enable debugging output
 #DEFINE "[NUN]","'"  'enable extra Nunchuk functions, requires nunchuk.inc
 #DEFINE "[MAP]","'"  'enable MAP debugging
 #DEFINE "[DRN]","'"  'enable Drohne debugging
@@ -46,7 +46,7 @@ DIM Integer Playfield.Y=Screen.VPy+26
 DIM Integer Playfield.W=604
 DIM Integer Playfield.H=348
 
-DIM Integer Winner
+'DIM Integer Winner
 
 page display PAGE_DISPLAY
 page write PAGE_BUFFER
@@ -141,8 +141,8 @@ do
     Game.draw
 
   case STATE_VICTORY
-    if one=0 then one=1 : Winner=getWinner() : playSample 8,5512,1
-    if isESC() then changeState(STATE_CONFIG) : playSample 14,22050,1
+    if one=0 then one=1 : player=Player.getWinner()  ' : playSample 8,5512,1
+    if isESC() then changeState(STATE_CONFIG)
 
     Game.update
     Game.draw
@@ -164,7 +164,7 @@ do
     x=Screen.VPx+(VP.W-239)/2 : y=Screen.VPy+(VP.H-189)/2
     blit 0,96,x,y,234,189,PAGE_SPRITES,&B100
     text Screen.W/2,y+88,"Player","C",3,,map(130),-1
-    text Screen.W/2,y+116,"#"+str$(Winner),"C",3,,map(130),-1
+    text Screen.W/2,y+116,"#"+str$(player),"C",3,,map(130),-1
 
     key=controls.readKey()
     if key=32 then changeState(STATE_CONFIG)
@@ -181,6 +181,7 @@ print "Good Bye..."
 
 sub changeState(newstate%)
   Game.State=newstate%
+  playSample 14,22050,1
   Panzer.Sound=0
   one=0
 end sub
@@ -194,20 +195,15 @@ function isESC() as Integer
     oldKey=Key
     if key=27 then isESC=1 : exit function
     if key=147 then save image "screenshot"+str$(screenshot)+".bmp":inc screenshot 'F3 for screenshot
-    if key=asc("0") then Drohne.state=DROHNE_OFF
-    if key=asc("1") then Drohne.start(Screen.VPx+VP.W/2,Screen.VPy,Panzer.X(0),Panzer.Y(0))
-    if key=asc("2") then Drohne.start(Screen.VPx+VP.W/2,Screen.VPy+VP.H,Panzer.X(0),Panzer.Y(0))
-    if key=asc("3") then Drohne.start(Screen.VPx,Screen.VPy+VP.H/2,Panzer.X(0),Panzer.Y(0))
-    if key=asc("4") then Drohne.start(Screen.VPx+VP.W,Screen.VPy+VP.H/2,Panzer.X(0),Panzer.Y(0))
   endif
 end function
 
-function getWinner() as Integer
-  LOCAL Integer player
+'function getWinner() as Integer
+'  LOCAL Integer player
 
-  for player=1 to Game.NumPlayers
-    if Player.isActive(player) then getWinner=player
-  next
-end function
+'  for player=1 to Game.NumPlayers
+'    if Player.isActive(player) then getWinner=player
+'  next
+'end function
 
 

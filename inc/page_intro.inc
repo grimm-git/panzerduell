@@ -1,5 +1,3 @@
-'Game page Intro with player selection
-'Dependencies: Controls.inc
 
 CONST INTRO_SPEED=20
 CONST ISTATE_CREDITS=0
@@ -21,7 +19,6 @@ DIM Float Logo.Y
 DIM Float Logo.phi
 DIM Float Logo.scale=100
 DIM Float Logo.steps=1500
-
 
 sub Intro.init()
   LOCAL Integer ctrls=Controls.getNumControls()
@@ -108,8 +105,9 @@ function Intro.update() as Integer
       Intro.num_players=num
     
       if key=13 or key=10 then
+        playSample 2,30000
+        pause 100 'necessary to play sound fx
         Intro.update=Intro.num_players
-        playSample 2,22050
       endif
     end select
   else
