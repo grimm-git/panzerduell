@@ -3,10 +3,11 @@ OPTION BASE 0
 OPTION EXPLICIT
 OPTION DEFAULT NONE
 
-#DEFINE "[DBG]","'"  'enable debugging output
 #DEFINE "[NUN]","'"  'enable extra Nunchuk functions, requires nunchuk.inc
+#DEFINE "[DBG]","'"  'enable standard debugging output
 #DEFINE "[MAP]","'"  'enable MAP debugging
 #DEFINE "[DRN]","'"  'enable Drohne debugging
+#DEFINE "[AI]",""   'enable AI debugging
 
 CONST PWD$=getParent$(MM.Info(current))
 
@@ -18,6 +19,7 @@ CONST PWD$=getParent$(MM.Info(current))
 #Include "inc/level.inc"
 #Include "inc/player.inc"
 #Include "inc/panzer.inc"
+#Include "inc/panzerAI.inc"
 #Include "inc/drohne.inc"
 #Include "inc/shots.inc"
 #Include "inc/explosion.inc"
@@ -45,8 +47,6 @@ DIM Integer Playfield.X=Screen.VPx+18
 DIM Integer Playfield.Y=Screen.VPy+26
 DIM Integer Playfield.W=604
 DIM Integer Playfield.H=348
-
-'DIM Integer Winner
 
 page display PAGE_DISPLAY
 page write PAGE_BUFFER
@@ -86,6 +86,7 @@ do
     Config.draw
     if Config.update()=1 then
       Level.load(Game.NumPlayers)
+      if Game.NumPlayers=1 then Player.setRobot(2)
       changeState(STATE_GAME)
     endif
 
@@ -139,6 +140,9 @@ do
     Game.update
     Particle.draw
     Game.draw
+
+    AI.update(Panzer.X(0),Panzer.Y(0))
+
 
   case STATE_VICTORY
     if one=0 then one=1 : player=Player.getWinner()  ' : playSample 8,5512,1

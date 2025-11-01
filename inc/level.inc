@@ -1,4 +1,5 @@
 
+CONST LEVEL_1P=1
 CONST LEVEL_2P=3
 CONST LEVEL_3P=2
 CONST LEVEL_4P=2
@@ -9,11 +10,14 @@ sub Level.load(num%)
   LOCAL Integer arg1,arg2,arg3,arg4
 
   select case num%  
-  case 1,2
+  case 1
+    lvl=int(RND()*LEVEL_1P+1)
+    tmp$="P1_"+str$(lvl,2,0,"0")
+    Level.setTwoPanzer
+  case 2
     lvl=int(RND()*LEVEL_2P+1)
     tmp$="P2_"+str$(lvl,2,0,"0")
     Level.setTwoPanzer
-    if num%=1 then Player.setRobot(2)
   case 3
     lvl=int(RND()*LEVEL_3P+1)
     tmp$="P3_"+str$(lvl,2,0,"0")
@@ -64,6 +68,17 @@ sub Level.setFourPanzer()
   Panzer.set(2,x+w-75,y  +75,-120)
   Panzer.set(3,x+w-75,y+h-75, -60)
 end sub
+
+P1_01:
+DATA "P1_01"
+DATA "O",150,66,35,71
+DATA "O",64,245,42,38
+DATA "O",280,1,32,43
+DATA "O",280,135,32,65
+DATA "O",280,293,32,43
+DATA "O",408,199,35,71
+DATA "O",486,53,42,38
+DATA "END"
 
 P2_01:
 DATA "P2_01"

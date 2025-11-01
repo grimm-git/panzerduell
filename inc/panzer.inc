@@ -26,6 +26,7 @@ DIM Float Panzer.tiReload(PANZER_MAX)
 DIM Float Panzer.tiRepair(PANZER_MAX)
 DIM Float Panzer.tiStill(PANZER_MAX)
 DIM Float Panzer.cycle(PANZER_MAX)
+DIM Float Panzer.robot(PANZER_MAX)
 
 
 'Sets the object into initial state
@@ -42,6 +43,7 @@ sub Panzer.init()
     Panzer.tiRepair(idx)=0
     Panzer.tiStill(idx)=0
     Panzer.cycle(idx)=1
+    Panzer.robot(idx)=0
   next
 end sub
 
@@ -49,9 +51,10 @@ sub Panzer.set(panzer%,x!,y!,phi!)
   Panzer.State(panzer%)=PSTATE_ACTIVE
   Panzer.X(panzer%)=x!
   Panzer.Y(panzer%)=y!
-  Panzer.phi(panzer%)=phi!
+  Panzer.phi(panzer%)=choice(phi!<0,phi!+360,phi!)
   Panzer.turm(panzer%)=0
   Panzer.tiStill(panzer%)=TIMER
+  Panzer.robot(panzer%)=0
 end sub
 
 sub Panzer.turn(panzer%,angle!)
@@ -83,7 +86,7 @@ sub Panzer.move(panzer%,delta!)
   _makeRectangle rect1(),x,y,cw,ch,RAD(Panzer.phi(panzer%))
 
   'Stop, if we bump into a house
-  if Map.hitByPanzer(rect1(),x,y,px,py) then exit sub
+  if Panzer.robot(panzer%)=0 AND Map.hitByPanzer(rect1(),x,y,px,py) then exit sub
 
   'Stop, if we bump into another tank
   for idx=0 to PANZER_MAX-1
