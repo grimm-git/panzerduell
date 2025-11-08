@@ -1,0 +1,7 @@
+.git
+.log
+*.bak
+*.cfg
+tst/
+
+
