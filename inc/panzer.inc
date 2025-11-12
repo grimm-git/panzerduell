@@ -83,20 +83,22 @@ sub Panzer.move(panzer%,delta!)
   if x<=Playfield.X+Panzer.W/2 or x>Playfield.X+Playfield.W-Panzer.W/2 then exit sub
   if y<=Playfield.Y+Panzer.H/2 or y>Playfield.Y+Playfield.H-Panzer.H/2 then exit sub
 
-  _makeRectangle rect1(),x,y,cw,ch,RAD(Panzer.phi(panzer%))
+  if Panzer.robot(panzer%)=0 then 'No collision check for robot Panzer
+    _makeRectangle rect1(),x,y,cw,ch,RAD(Panzer.phi(panzer%))
 
-  'Stop, if we bump into a house
-  if Panzer.robot(panzer%)=0 AND Map.hitByPanzer(rect1(),x,y,px,py) then exit sub
+    'Stop, if we bump into a house
+    if Map.hitByPanzer(rect1(),x,y,px,py) then exit sub
 
-  'Stop, if we bump into another tank
-  for idx=0 to PANZER_MAX-1
-    if Panzer.State(idx)=PSTATE_NONE then continue for
-    if idx=panzer% then continue for
+    'Stop, if we bump into another tank
+    for idx=0 to PANZER_MAX-1
+      if Panzer.State(idx)=PSTATE_NONE then continue for
+      if idx=panzer% then continue for
 
-    pd=_distance(px,py,Panzer.X(idx),Panzer.Y(idx))
-    nd=_distance( x, y,Panzer.X(idx),Panzer.Y(idx))
-    if nd<pd then if Panzer.hitByPanzer(rect1(),idx) then exit sub
-  next
+      pd=Math.distance(px,py,Panzer.X(idx),Panzer.Y(idx))
+      nd=Math.distance( x, y,Panzer.X(idx),Panzer.Y(idx))
+      if nd<pd then if Panzer.hitByPanzer(rect1(),idx) then exit sub
+    next
+  endif
 
   Panzer.tiStill(panzer%)=TIMER
   Panzer.X(panzer%)=x : Panzer.Y(panzer%)=y
@@ -131,6 +133,7 @@ function Panzer.repair(idx%) as Integer
     Panzer.tiRepair(idx%)=TIMER
     Panzer.cycle(idx%)=1
     Panzer.repair=1
+    Map.maskPanzer(Panzer.X(idx%),Panzer.Y(idx%)) 'remove map markings for Panzer
   endif
 end function
 
@@ -140,6 +143,7 @@ sub Panzer.draw()
 
   for idx=0 to PANZER_MAX-1
     if Panzer.State(idx)=PSTATE_NONE then continue for
+    if Panzer.robot(idx)=1 then Panzer.tiStill(idx)=TIMER
 
     select case Panzer.State(idx)
     case PSTATE_ACTIVE
@@ -160,6 +164,7 @@ sub Panzer.draw()
           for n=0 to 7
             Shots.fire(idx,Panzer.X(idx),Panzer.Y(idx),RND()*20+n*45-10)
           next
+          AI.sendSignal choice(Panzer.robot(idx),AISIG_AI_ALIVE,AISIG_TARGET_ALIVE)
         endif
       endif
       if TIMER-Panzer.tiRepair(idx)<PANZER_REPAIRSTEP*Panzer.cycle(idx) then img=0
@@ -184,7 +189,9 @@ sub Panzer.destroy(idx%)
     Explosion.add Panzer.X(idx%),Panzer.Y(idx%),,EX_TYPE_SMALL
   else
     Explosion.add Panzer.X(idx%),Panzer.Y(idx%),,EX_TYPE_BIG
+    Map.maskPanzer(Panzer.X(idx%),Panzer.Y(idx%))  'Mark destroyed panzer in map
     Panzer.State(idx%)=PSTATE_DESTROYED
+    AI.sendSignal choice(Panzer.robot(idx%)=1,AISIG_AI_DEAD,AISIG_TARGET_DEAD)
   endif
 end sub
 

@@ -42,7 +42,7 @@ sub Drohne.start(x2!,y2!)
     nx=y1!-y2! : ny=x2!-x1! : nl=SQR(nx*nx+ny*ny)
     nx=nx/nl   : ny=ny/nl 'Normed normal vector
     
-    Drohne.dt=3/_distance(x1!,y1!,x2!,y2!)
+    Drohne.dt=3/Math.distance(x1!,y1!,x2!,y2!)
 
     a=(y2!-y1!)/(x2!-x1!) : b=y1!-a*x1! : d=(x2!-x1!)/3
     s=choice(y1!<Screen.VPy+VP.H/2,-1,1)  

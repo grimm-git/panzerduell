@@ -24,7 +24,7 @@ CONST PAGE_DEVICES=7   '                    $D041A000-$D04AFFFF
 
 
 DIM Integer Game.State      ' Default=STATE_INTRO
-DIM Integer Game.Ready
+DIM Integer Game.NotReady
 DIM Integer Game.Level      ' levels start with 1
 DIM Integer Game.Requests   ' bitfield
 DIM Integer Game.NumPlayers
@@ -34,8 +34,6 @@ DIM Float   Game.frameTimer
 [DBG] DIM Float   DBG.updateTime
 
 sub Game.init()
-  Game.Ready=0
-
   Controls.init
   Settings.load("PanzerDuell.cfg")
   Panzer.init
@@ -52,8 +50,9 @@ sub Game.loadAssets()
   
   mode 8,8
   load data "img/sprites.raw",MM.Info(page address PAGE_SPRITES)
-  load data "img/playfield.raw",MM.Info(page address PAGE_BACKGND)
-'  load data "img/grasland.raw",MM.Info(page address PAGE_BACKGND)
+'  load data "img/arena.raw",MM.Info(page address PAGE_BACKGND)
+'  load data "img/grassland.raw",MM.Info(page address PAGE_BACKGND)
+  load data "img/desert.raw",MM.Info(page address PAGE_BACKGND)
   load data "img/tileset.raw",MM.Info(page address PAGE_TILESET)
   if Not Map.loadMasks("img/tileset.masks") then
     text MM.HRES/2,MM.VRES/2,"Generating Game Data...","C",3,,map(8),-1
@@ -81,6 +80,7 @@ sub Game.start
   playMOD "soundfx"
   Particle.init
   Drohne.init
+  AI.reset
 
   cmap.activate
   page write PAGE_PLAYFIELD
@@ -89,7 +89,8 @@ sub Game.start
   page write PAGE_BUFFER
   page display PAGE_DISPLAY
 
-  Game.Ready=1
+  Game.NotReady=1
+  AI.sendSignal AISIG_HOLD
 end sub
 
 sub Game.clrScreen
@@ -108,8 +109,6 @@ sub Game.update
 end sub
 
 sub Game.draw
-  STATIC Integer stage
-
   Shots.update
   Panzer.draw
   Explosion.draw
@@ -132,13 +131,14 @@ sub Game.getReady
   STATIC Integer show=10
   STATIC Float tim
 
-  if Game.Ready=1 AND TIMER-tim>400 then
+  if Game.NotReady=1 AND TIMER-tim>400 then
     if show>0 then
       tim=TIMER
       inc show,-1
     else
       show=10
-      Game.Ready=0
+      Game.NotReady=0
+      AI.sendSignal AISIG_RELEASE
     endif
   endif
   if (show AND 1)=1 then

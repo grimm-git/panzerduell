@@ -40,28 +40,41 @@ function cfr(value!) as Float
   cfr=choice(Game.frameTime<13.3,value!,Game.frameTime/13.3*value!)
 end function
 
-sub _drawRectangle(rect!(),color%)
-  line rect!(0),rect!(1),rect!(2),rect!(3),1,color%
-  line rect!(2),rect!(3),rect!(4),rect!(5),1,color%
-  line rect!(4),rect!(5),rect!(6),rect!(7),1,color%
-  line rect!(6),rect!(7),rect!(0),rect!(1),1,color%
-end sub
-
-function _distance(x1!,y1!,x2!,y2!) as float
+function Math.distance(x1!,y1!,x2!,y2!) as float
   LOCAL float dx,dy
 
   dx=x2!-x1! : dy=y2!-y1!
-  _distance=SQR(dx*dx+dy*dy)
+  Math.distance=SQR(dx*dx+dy*dy)
 end function
 
-sub frame(x%,y%,w%,h%)
+'(x1/y1),(x2,y2)=One line segment
+'(x3/y3),(x4,y4)=Second line segment
+function Math.intersect(x1!,y1!,x2!,y2!,x3!,y3!,x4!,y4!) as Integer
+  LOCAL Float den,ua,ub,numA,numB
+
+  den=(y4!-y3!)*(x2!-x1!) - (x4!-x3!)*(y2!-y1!)
+  if den=0 then exit function
+  
+  numA=(x4!-x3!)*(y1!-y3!) - (y4!-y3!)*(x1!-x3!)
+  numB=(x2!-x1!)*(y1!-y3!) - (y2!-y1!)*(x1!-x3!)
+  ua=numA/den : ub=numB/den
+
+  if ua>=0 and ua<=1 and ub>=0 and ub<=1 then Math.intersect=1
+[MAT] if Math.intersect=1 then line x3!,y3!,x4!,y4!,1,map(7)
+end function
+
+sub DBG.drawFrame(x%,y%,w%,h%)
   line x%,y%,x%+w%-1,y%
   line x%+w%-1,y%,x%+w%-1,y%+h%-1
   line x%,y%,x%,y%+h%-1
   line x%,y%+h%-1,x%+w%-1,y%+h%-1
 end sub
 
-
-
+sub DBG.drawRectangle(rect!(),color%)
+  line rect!(0),rect!(1),rect!(2),rect!(3),1,color%
+  line rect!(2),rect!(3),rect!(4),rect!(5),1,color%
+  line rect!(4),rect!(5),rect!(6),rect!(7),1,color%
+  line rect!(6),rect!(7),rect!(0),rect!(1),1,color%
+end sub
 
 

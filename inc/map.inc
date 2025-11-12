@@ -1,5 +1,3 @@
-' Code to load level data from disk
-' Requires: cmap
 
 CONST MAPTILESIZE=16
 CONST MAPOFFSET_X=6
@@ -158,10 +156,10 @@ sub Map.draw()
     next
   next
 
-[MAP] frame(Playfield.X+MAPOFFSET_X,Playfield.Y+MAPOFFSET_Y,MAP.W*MAPTILESIZE,MAP.H*MAPTILESIZE)
+[MAP] DBG.drawFrame(Playfield.X+MAPOFFSET_X,Playfield.Y+MAPOFFSET_Y,MAP.W*MAPTILESIZE,MAP.H*MAPTILESIZE)
 [MAP] LOCAL Integer n
 [MAP] for n=0 to Map.Obj.next-1
-[MAP]  frame(Map.Obj(n,0),Map.Obj(n,1),Map.Obj(n,2),Map.Obj(n,3))
+[MAP]  DBG.drawFrame(Map.Obj(n,0),Map.Obj(n,1),Map.Obj(n,2),Map.Obj(n,3))
 [MAP] next
 
   PAGE write PAGE_BUFFER
@@ -190,6 +188,23 @@ function Map.putDamageTile(tile1%,tx1%,ty1%,tile2%,tx2%,ty2%) as Integer
   Map.putDamageTile=1
 end function
 
+sub Map.maskPanzer(x!,y!)
+  LOCAL Integer tx,ty,n,m
+  LOCAL Integer source=-1,dest=39
+
+  tx=int(Map.toMapX(x!)/MAPTILESIZE)
+  ty=int(Map.toMapY(y!)/MAPTILESIZE)
+  if Map.map(tx,ty)=dest then source=dest : dest=-1
+
+  for n=-1 to 1
+    if ty+n<0 or ty+n>MAP.H then continue for
+    for m=-1 to 1
+      if tx+m<0 or tx+m>MAP.W then continue for
+      if Map.map(tx+m,ty+n)=source then Map.map(tx+m,ty+n)=dest
+    next
+  next  
+end sub
+
 function Map.hitByPanzer(rect1!(),nx!,ny!,px!,py!) as Integer
   LOCAL Float rect2!(7),pd,nd,onx,ony
   LOCAL Integer n
@@ -197,11 +212,11 @@ function Map.hitByPanzer(rect1!(),nx!,ny!,px!,py!) as Integer
   for n=0 to Map.Obj.next-1
     onx=Map.Obj(n,0)+Map.Obj(n,2)/2
     ony=Map.Obj(n,1)+Map.Obj(n,3)/2
-    pd=_distance(px!,py!,onx,ony)
-    nd=_distance(nx!,ny!,onx,ony)
+    pd=Math.distance(px!,py!,onx,ony)
+    nd=Math.distance(nx!,ny!,onx,ony)
     if pd>nd then
       _makeRectangle(rect2!(),onx,ony,Map.Obj(n,2),Map.Obj(n,3),0)
-[MAP] _drawRectangle rect2!(),map(4)
+[MAP] DBG.drawRectangle rect2!(),map(4)
       if _doOverlap(rect1!(),rect2!()) then Map.hitByPanzer=1 : exit for
     endif
   next

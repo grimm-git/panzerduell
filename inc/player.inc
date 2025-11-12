@@ -93,16 +93,11 @@ end sub
 sub Player.kill(player%)
   LOCAL Integer idx=player%-1
 
-  if Panzer.robot(idx)=1 then AI.sendSignal(AISIG_DEAD_AI)
   if Player.lives(idx)=0 then Player.State(idx)=PLAYER_DEAD
 end sub
 
 function Player.isActive(player%) as Integer
   Player.isActive=choice(Player.State(player%-1)=PLAYER_ACTIVE,1,0)
-end function
-
-function Player.isDead(player%) as Integer
-  Player.isDead=choice(Player.State(player%-1)=PLAYER_DEAD,1,0)
 end function
 
 'player% = 1..
@@ -115,7 +110,6 @@ sub Player.incKills(player%)
   LOCAL Integer idx=player%-1
 
   inc Player.kills(idx)
-  if Panzer.robot(idx)=1 then AI.sendSignal(AISIG_DEAD_TARGET)
 end sub
 
 function Player.getWinner() as Integer
@@ -144,9 +138,13 @@ end function
 sub Player.setRobot(player%)
   LOCAL Integer idx=player%-1
 
-  Panzer.robot(idx)=1
-  Player.state(idx)=PLAYER_ACTIVE
-  AI.install(idx)
+  if player%=0 then
+    AI.off
+  else
+    Panzer.robot(idx)=1
+    Player.state(idx)=PLAYER_ACTIVE
+    AI.install(idx)
+  endif
 end sub
 
 

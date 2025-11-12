@@ -7,7 +7,8 @@ OPTION DEFAULT NONE
 #DEFINE "[DBG]","'"  'enable standard debugging output
 #DEFINE "[MAP]","'"  'enable MAP debugging
 #DEFINE "[DRN]","'"  'enable Drohne debugging
-#DEFINE "[AI]",""   'enable AI debugging
+#DEFINE "[AI]","'"   'enable AI debugging
+#DEFINE "[MAT]","'"  'enable Math debugging
 
 CONST PWD$=getParent$(MM.Info(current))
 
@@ -86,7 +87,7 @@ do
     Config.draw
     if Config.update()=1 then
       Level.load(Game.NumPlayers)
-      if Game.NumPlayers=1 then Player.setRobot(2)
+      Player.setRobot(choice(Game.NumPlayers=1,2,0))
       changeState(STATE_GAME)
     endif
 
@@ -95,13 +96,15 @@ do
     if isESC() then cls : changeState(STATE_CONFIG)
 
     for player=0 to Game.NumPlayers-1
+      if Game.NotReady then exit for
+
       inpch=Player.getInpch(player+1)
       ctrl=Controls.read(inpch)
 
       if Panzer.isActive(player) then      
         if (ctrl and 1) > 0 then 'left
           if (ctrl and 12) > 0 then
-            Panzer.turn(player,-1)
+            Panzer.turn(player,-1.5)
           else
             Panzer.cannon(player,-1)
           endif
@@ -109,7 +112,7 @@ do
 
         if (ctrl and 2) > 0 then 'right
           if (ctrl and 12) > 0 then
-            Panzer.turn(player,1)
+            Panzer.turn(player,1.5)
           else
             Panzer.cannon(player,1)
           endif
@@ -124,7 +127,7 @@ do
         endif
 
         if (ctrl and 16) > 0 then 'fire
-          if Game.Ready=0 then Panzer.fire(player)
+          Panzer.fire(player)
         endif
       endif
 
@@ -143,7 +146,6 @@ do
 
     AI.update(Panzer.X(0),Panzer.Y(0))
 
-
   case STATE_VICTORY
     if one=0 then one=1 : player=Player.getWinner()  ' : playSample 8,5512,1
     if isESC() then changeState(STATE_CONFIG)
@@ -156,18 +158,20 @@ do
       tim=TIMER-RND()*2000
       select case int(RND()*3)
       case 0
-        Emitter.rocket1 x,y,RAD(150+RND()*60),120+RND()*30,"Emitter.fw1"
+        Emitter.rocket1 x,y,RAD(150+RND()*60),80+RND()*30,"Emitter.fw1"
       case 1  
-        Emitter.rocket2 x,y,RAD(150+RND()*60),120+RND()*30,"Emitter.fw2"
+        Emitter.rocket2 x,y,RAD(150+RND()*60),80+RND()*30,"Emitter.fw2"
       case 2
-        Emitter.rocket2 x,y,RAD(150+RND()*60),120+RND()*30,"Emitter.fw3"
+        Emitter.rocket2 x,y,RAD(150+RND()*60),80+RND()*30,"Emitter.fw3"
       end select
     endif
     Particle.draw
 
     x=Screen.VPx+(VP.W-239)/2 : y=Screen.VPy+(VP.H-189)/2
     blit 0,96,x,y,234,189,PAGE_SPRITES,&B100
+    text Screen.W/2+1,y+89,"Player","C",3,,map(52),-1
     text Screen.W/2,y+88,"Player","C",3,,map(130),-1
+    text Screen.W/2+1,y+117,"#"+str$(player),"C",3,,map(52),-1
     text Screen.W/2,y+116,"#"+str$(player),"C",3,,map(130),-1
 
     key=controls.readKey()

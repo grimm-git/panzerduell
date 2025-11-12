@@ -1,33 +1,42 @@
-CONST AI.REPAIRDELAY=2000
+CONST AI.REPAIRDELAY=8000
+CONST AI.PATHBUFFER=3
+CONST AI.PATHMINDIST=5
 
 CONST AISTATE_OFF=0
 CONST AISTATE_WAIT=1
-CONST AISTATE_TURN=2
-CONST AISTATE_MOVE=3
-CONST AISTATE_DESTROYED=4
-CONST AISTATE_NOTARGET=5
+CONST AISTATE_MOVE=2
+CONST AISTATE_DESTROYED=3
+CONST AISTATE_GOHOME=4
+CONST AISTATE_ATHOME=5
 
-CONST AISIG_DEAD_AI=0
-CONST AISIG_DEAD_TARGET=1
+CONST AIFLG_TARGET_DEAD=0
+CONST AIFLG_HOLD=1
+CONST AIFLG_ATTACK=2
+
+CONST AISIG_AI_DEAD=0
+CONST AISIG_AI_ALIVE=1
+CONST AISIG_TARGET_DEAD=2
+CONST AISIG_TARGET_ALIVE=3
+CONST AISIG_HOLD=4
+CONST AISIG_RELEASE=5
 
 CONST ASTAR_NOTREADY=0
-CONST ASTAR_READY   =1
-CONST ASTAR_RUNNING =2
+CONST ASTAR_READY=1
+CONST ASTAR_RUNNING=2
 CONST ASTAR_COMPLETE=3
-CONST ASTAR_NOPATH  =4
-'CONST ASTAR_EXECUTE =5
+CONST ASTAR_NOPATH=4
+CONST ASTAR_PAUSED=5
 CONST ASTAR_SLICES=5
 
-'CONST PATH_HALT=0
-'CONST PATH_TURN=1
-'CONST PATH_MOVE=2
 
 DIM Integer AI.State
-DIM Integer AI.Panzer  'robot Panzer
+DIM Integer AI.Panzer
 DIM Integer AI.Panzer.homeX
 DIM Integer AI.Panzer.homeY
-DIM Integer AI.Target  'target Panzer
 DIM Float   AI.timRepair
+DIM Integer AI.Flags
+DIM Integer AI.Target.lastX
+DIM Integer AI.Target.lastY
 
 DIM Integer AI.AStar.State
 DIM Integer AI.AStar.spx
@@ -44,10 +53,13 @@ DIM Integer AI.AStar.predY(MAP.W,MAP.H)
 
 DIM Integer AI.Path.next
 DIM Integer AI.Path.length
-DIM Integer AI.Path.State
-DIM Integer AI.Path.X(Map.W+MAP.H)
-DIM Integer AI.Path.Y(Map.W+MAP.H)
+DIM Float   AI.Path.X(Map.W+MAP.H)
+DIM Float   AI.Path.Y(Map.W+MAP.H)
 
+
+sub AI.off()
+  AI.State=AISTATE_OFF
+end sub
 
 sub AI.install(idx%)
   AI.Panzer=idx%
@@ -55,120 +67,123 @@ sub AI.install(idx%)
   AI.Panzer.homeY=Panzer.Y(idx%)
   AI.State=AISTATE_WAIT
   AI.AStar.State=ASTAR_NOTREADY
-'  AI.Path.State=PATH_TURN
+  AI.Flags=1<<AIFLG_HOLD
+end sub
+
+sub AI.reset()
+  if AI.State=AISTATE_OFF then exit sub
+
+  AI.State=AISTATE_WAIT
+  AI.AStar.State=ASTAR_NOTREADY
+  AI.Path.next=0
+  AI.Path.length=0
+  AI.Flags=0
 end sub
 
 sub AI.sendSignal(signal%)
+  LOCAL Integer flag
+
+  if AI.State=AISTATE_OFF then exit sub
+
   select case signal%
-  case AISIG_DEAD_AI
+  case AISIG_AI_DEAD
     AI.State=AISTATE_DESTROYED
     AI.timRepair=TIMER
-  case AISIG_DEAD_TARGET
-    AI.State=AISTATE_NOTARGET
+
+  case AISIG_AI_ALIVE
+    flag=tst(AI.Flags,AIFLG_TARGET_DEAD)
+    AI.State=choice(flag,AISTATE_GOHOME,AISTATE_MOVE)
+
+  case AISIG_TARGET_DEAD
+    set AI.Flags,AIFLG_TARGET_DEAD
+    if AI.State<>AISTATE_DESTROYED then AI.State=AISTATE_GOHOME
+
+  case AISIG_TARGET_ALIVE
+    clr AI.Flags,AIFLG_TARGET_DEAD
+    if AI.State<>AISTATE_DESTROYED then AI.AStar.State=ASTAR_NOTREADY  'trigger new path
+
+  case AISIG_HOLD
+    set AI.Flags,AIFLG_HOLD
+
+  case AISIG_RELEASE
+    clr AI.Flags,AIFLG_HOLD
+
   end select
 end sub
 
 'x2/y2=target
 sub AI.update(x2!,y2!)
-  STATIC Integer mc=0
   STATIC Float tim
-  LOCAL Integer locked,dummy
-  LOCAL Float x1,y1,px,py
+  LOCAL Float x1,y1,px,py,gx,gy
+  LOCAL Integer n
 
-'  LOCAL Integer n,intersect=0
-'  LOCAL Float rx,ry,rw,rh
+[AI] LOCAL String aistates(5)=("off","wait","move","destroyed","go home","at home")
+[AI] LOCAL String astarstates(5)=("notready","ready","running","complete","nopath","paused")
+[AI] for n=0 to AI.Path.length-1
+[AI]   circle AI.Path.X(n),AI.Path.Y(n),2,0,1.0,map(2),map(2)
+[AI] next
+[AI] text 5, 5,"State      : "+aistates(AI.State),"L",7,,map(7)
+[AI] text 5,13,"AStar State: "+astarstates(AI.AStar.State),"L",7,,map(7)
 
-  'find a path to target
-  AI.findPath(x2!,y2!)
-  if AI.AStar.State=ASTAR_COMPLETE then
-    AI.extractPath()
-    AI.AStar.State=ASTAR_NOTREADY
-    AI.State=AISTATE_TURN
-  else if AI.AStar.State=ASTAR_NOPATH then
-    AI.AStar.State=ASTAR_NOTREADY
-  endif
+  if AI.State=AISTATE_OFF then exit sub
 
-  if AI.State<>AISTATE_WAIT then
-    x1=Panzer.X(AI.Panzer) : y1=Panzer.Y(AI.Panzer)
-    px=Map.toScrX(AI.Path.X(AI.Path.next)*MAPTILESIZE+MAPTILESIZE/2)
-    py=Map.toScrY(AI.Path.Y(AI.Path.next)*MAPTILESIZE+MAPTILESIZE/2)
+  AI.findPath(x2!,y2!) 'find a path to target
+  x1=Panzer.X(AI.Panzer)     : y1=Panzer.Y(AI.Panzer)
+  px=AI.Path.X(AI.Path.next) : py=AI.Path.Y(AI.Path.next)
 
-[AI] circle px,py,2,0,1.0,map(2),map(2)
-[AI] text 40,10,"State      : "+str$(AI.State),"L",7,,map(7)
-[AI] text 40,20,"AStar State: "+str$(AI.AStar.State),"L",7,,map(7)
-[AI] text 40,30,"Path Next  : "+str$(AI.Path.next),"L",7,,map(7)
+[AI] circle px,py,2,0,1.0,map(2),map(4)
 
-    select case AI.State
-    case AISTATE_TURN
-      if AI.turnPanzer(px,py,0) then AI.State=AISTATE_MOVE
-      locked=AI.findTarget(x2!,y2!)
-
-    case AISTATE_MOVE
-'      rx=x1 : ry=y1
-      Panzer.move(AI.Panzer,0.5)
-      if x1=Panzer.X(AI.Panzer) AND y1=Panzer.Y(AI.Panzer) then 'rx,ry
-        dummy=AI.turnPanzer(px,py,1)
-        mc=0
-      else
-        if _distance(x1,y1,px,py) < 16 then inc AI.Path.next
-        if mc>0 then inc mc,-1 else AI.State=AISTATE_TURN
-        if AI.Path.length-AI.Path.next<5 then AI.State=AISTATE_WAIT
+  select case AI.State
+  case AISTATE_WAIT
+    if NOT tst(AI.Flags,AIFLG_HOLD) then
+      if tst(AI.Flags,AIFLG_ATTACK) then
+        clr AI.Flags,AIFLG_ATTACK
+        AI.State=AISTATE_MOVE
       endif
-      locked=AI.findTarget(x2!,y2!)
+    endif
 
-    case AISTATE_DESTROYED
-       if TIMER-AI.timRepair>AI.REPAIRDELAY then Panzer.repair AI.Panzer
+  case AISTATE_MOVE
+    if NOT tst(AI.Flags,AIFLG_TARGET_DEAD) then
+      if AI.findTarget(x2!,y2!) then Panzer.fire(AI.Panzer)
+      gx=int(Map.toMapX(x2!)/MAPTILESIZE) : gy=int(Map.toMapY(y2!)/MAPTILESIZE)
+      if AI.Target.lastX=0 then AI.Target.lastX=gx : AI.Target.lastY=gy
+      if Math.distance(AI.Target.lastX,AI.Target.lastY,gx,gy)>AI.PATHMINDIST then
+        AI.Target.lastX=gx : AI.Target.lastY=gy
+        AI.AStar.State=ASTAR_NOTREADY  'trigger new path
+      endif
+    else
+      n=AI.turnTurret0()
+    endif
 
-    case AISTATE_NOTARGET
-      AI.AStar.State=ASTAR_NOTREADY
-      AI.findPath(AI.Panzer.homeX,AI.Panzer.homeY)
-    end select
+    if AI.turnPanzer(px,py) then
+      Panzer.move(AI.Panzer,0.5)
+      if AI.Path.length=AI.Path.next then
+        if tst(AI.Flags,AIFLG_TARGET_DEAD) then
+          AI.State=AISTATE_ATHOME
+        else
+          AI.State=AISTATE_WAIT
+          AI.AStar.State=ASTAR_NOTREADY
+        endif
+      else if Math.distance(x1,y1,px,py)<16 then
+        inc AI.Path.next
+      endif
+    endif
+  
+  case AISTATE_DESTROYED
+    if TIMER-AI.timRepair>AI.REPAIRDELAY then n=Panzer.repair(AI.Panzer)
 
-    if locked then Panzer.fire(AI.Panzer)
-  endif
+  case AISTATE_GOHOME
+    AI.prepareAStar(Panzer.X(AI.Panzer),Panzer.Y(AI.Panzer),AI.Panzer.homeX,AI.Panzer.homeY)
+    AI.runAStar()
+    AI.State=AISTATE_MOVE
 
+  case AISTATE_ATHOME
+    if AI.turnPanzer(x2!,py) then
+      clr AI.Flags,AIFLG_ATTACK
+      AI.State=AISTATE_WAIT
+    endif
 
-'  select case AI.AStar.State
-'  case ASTAR_NOTREADY
-'    AI.prepareAStar(x1,y1,x2!,y2!)
-'  case ASTAR_NOTREADY,ASTAR_READY,ASTAR_RUNNING
-'    AI.findPath()
-'  case ASTAR_COMPLETE
-'    AI.extractPath()
-'    AI.AStar.State=ASTAR_EXECUTE
-'  case ASTAR_EXECUTE
-'    px=Map.toScrX(AI.Path.X(AI.Path.next)*MAPTILESIZE+MAPTILESIZE/2)
-'    py=Map.toScrY(AI.Path.Y(AI.Path.next)*MAPTILESIZE+MAPTILESIZE/2)
-'
-'    select case AI.Path.State
-'    case PATH_TURN
-'      if AI.turnPanzer(px,py,0) then AI.Path.State=PATH_MOVE
-'    case PATH_MOVE
-'      rx=x1 : ry=y1
-'      Panzer.move(AI.Panzer,0.5)
-'      if rx=Panzer.X(AI.Panzer) AND ry=Panzer.Y(AI.Panzer) then 
-'        n=AI.turnPanzer(px,py,1)
-'        mc=0
-'      else
-'        if _distance(x1,y1,px,py) < 16 then inc AI.Path.next
-'        if mc>0 then inc mc,-1 else AI.Path.State=PATH_TURN
-'      endif
-'    end select
-'  end select
-
-'  for n=0 to Map.Obj.next-1
-'    rx=Map.Obj(n,0) : ry=Map.Obj(n,1)
-'    rw=Map.Obj(n,2) : rh=Map.Obj(n,3)
-
-'    if Math.intersect(x1,y1,x2!,y2!,rx   ,ry   ,rx+rw,ry)    then intersect=1 : exit for
-'    if Math.intersect(x1,y1,x2!,y2!,rx+rw,ry   ,rx+rw,ry+rh) then intersect=1 : exit for
-'    if Math.intersect(x1,y1,x2!,y2!,rx+rw,ry+rh,rx   ,ry+rh) then intersect=1 : exit for
-'    if Math.intersect(x1,y1,x2!,y2!,rx   ,ry+rh,rx   ,ry)    then intersect=1 : exit for
-'  next
-'[AI] line x1,y1,x2!,y2!,1,map(choice(intersect,1,2))
-
-'  AI.adjTurret x2!,y2!
-'  if intersect=0 then Panzer.fire(AI.Panzer)
+  end select
 end sub
 
 function AI.findTarget(x2!,y2!) as Integer
@@ -197,6 +212,7 @@ end function
 sub AI.findPath(x2!,y2!)
   LOCAL Float x1,y1
 
+  if AI.AStar.State=ASTAR_PAUSED then exit sub
   x1=Panzer.X(AI.Panzer) : y1=Panzer.Y(AI.Panzer)
 
   select case AI.AStar.State
@@ -204,7 +220,61 @@ sub AI.findPath(x2!,y2!)
     AI.prepareAStar(x1,y1,x2!,y2!)
   case ASTAR_READY,ASTAR_RUNNING
     AI.runAStar()
+  case ASTAR_COMPLETE
+    AI.extractPath()
+    set AI.Flags,AIFLG_ATTACK
+    AI.AStar.State=ASTAR_PAUSED
+  case ASTAR_NOPATH
+    AI.AStar.State=ASTAR_NOTREADY
   end select
+end sub
+
+sub AI.extractPath()
+  LOCAL Integer path(2*(MAP.W+MAP.H))
+  LOCAL Integer idx,px,py,nx,ny
+  LOCAL Float offsX,offsY
+
+  px=AI.AStar.gpx : py=AI.AStar.gpy : idx=0
+  do while NOT (px=AI.AStar.spx AND py=AI.AStar.spy)
+    nx=AI.AStar.predX(px,py) : ny=AI.AStar.predY(px,py)
+    path(idx  )=nx : px=nx
+    path(idx+1)=ny : py=ny
+    inc idx,2
+  loop
+  AI.Path.length=idx/2-2
+
+  for idx=0 to AI.Path.length
+    px=path(2*(AI.Path.length-idx))
+    py=path(2*(AI.Path.length-idx)+1)
+    offsX=MAPTILESIZE/2 : offsY=MAPTILESIZE/2
+
+    if px-1>=0 and px+1<MAP.W and py-1>=0 and py+1<MAP.H then
+      if Map.map(px+1,py)>0 then
+        inc offsX,-4
+        if Map.map(px+1,py+1)=-1 then inc offsY,4
+        if Map.map(px+1,py-1)=-1 then inc offsY,-4
+      endif
+      if Map.map(px-1,py)>0 then
+        inc offsX,4
+        if Map.map(px-1,py+1)=-1 then inc offsY,4
+        if Map.map(px-1,py-1)=-1 then inc offsY,-4
+      endif
+      if Map.map(px,py+1)>0 then
+        inc offsY,-4
+        if Map.map(px-1,py+1)=-1 then inc offsX,-4
+        if Map.map(px+1,py+1)=-1 then inc offsX,4
+      endif
+      if Map.map(px,py-1)>0 then
+        inc offsY,4
+        if Map.map(px-1,py-1)=-1 then inc offsX,-4
+        if Map.map(px+1,py-1)=-1 then inc offsX,4
+      endif
+    endif
+
+    AI.Path.X(idx)=Map.toScrX(px*MAPTILESIZE+offsX)
+    AI.Path.Y(idx)=Map.toScrY(py*MAPTILESIZE+offsY)
+  next
+  AI.Path.next=0
 end sub
 
 'x2,y2=target
@@ -220,43 +290,45 @@ function AI.turnTurret(x2!,y2!) as Integer
   if beta>360 then inc beta,-360
 
   if abs(alpha-beta)>1 then
-    dir=choice(abs(alpha-beta)>180,1,-1)
+    dir=cfr(choice(abs(alpha-beta)>180,1,-1))
     Panzer.cannon AI.Panzer,choice(beta>alpha,dir,-dir)
   else
     AI.turnTurret=1
   endif
 end function
 
+function AI.turnTurret0() as Integer
+  if Panzer.turm(AI.Panzer)<>0 then
+    Panzer.cannon AI.Panzer,cfr(choice(Panzer.turm(AI.Panzer)>180,1,-1))
+  else
+    AI.turnTurret0=1
+  endif
+end function
+
 'x2,y2=target
-function AI.turnPanzer(x2!,y2!,blk%) as Integer
-  STATIC Integer dir
+function AI.turnPanzer(x2!,y2!) as Integer
+  LOCAL Integer dir
   LOCAL Float x1,y1,alpha,beta
 
-  if blk%=1 then
+  x1=Panzer.X(AI.Panzer) : y1=Panzer.Y(AI.Panzer)
+
+  alpha=DEG(atan2(x2!-x1,y1-y2!))
+  if alpha<0 then inc alpha,360
+  beta =Panzer.phi(AI.Panzer)
+  if beta>360 then inc beta,-360
+
+  if abs(alpha-beta)>1 then
+    dir=choice(abs(alpha-beta)>180,1,-1)
+    dir=choice(beta>alpha,dir,-dir)
     Panzer.turn AI.Panzer,dir
   else
-    x1=Panzer.X(AI.Panzer) : y1=Panzer.Y(AI.Panzer)
-
-    alpha=DEG(atan2(x2!-x1,y1-y2!))
-    if alpha<0 then inc alpha,360
-    beta =Panzer.phi(AI.Panzer)
-    if beta>360 then inc beta,-360
-
-    if abs(alpha-beta)>1 then
-      dir=choice(abs(alpha-beta)>180,1,-1)
-      dir=choice(beta>alpha,dir,-dir)
-      Panzer.turn AI.Panzer,dir
-    else
-      AI.turnPanzer=1
-    endif
+    AI.turnPanzer=1
   endif
 end function
 
 sub AI.prepareAStar(sx%,sy%,gx%,gy%)
   LOCAL Integer _sx,_sy,_gx,_gy
   LOCAL Integer x,y
-
-  if AI.Astar.State=ASTAR_RUNNING then exit sub
 
   _sx=int(Map.toMapX(sx%)/MAPTILESIZE) : AI.AStar.spx=_sx
   _sy=int(Map.toMapY(sy%)/MAPTILESIZE) : AI.AStar.spy=_sy
@@ -268,6 +340,9 @@ sub AI.prepareAStar(sx%,sy%,gx%,gy%)
       AI.AStar.gScore(x,y)=9999
       AI.AStar.fScore(x,y)=9999
     next
+  next
+  for x=0 to MAP.W*MAP.H-1
+    AI.AStar.closedList(x)=0
   next
 
   ' Setup start node
@@ -283,8 +358,6 @@ sub AI.runAStar()
   LOCAL Integer current,cx,cy,dx,dy,nx,ny,lx,ly
   LOCAL Integer n,found,slice
 
-  if AI.AStar.State=ASTAR_NOTREADY then exit sub
-  if AI.AStar.State=ASTAR_COMPLETE then exit sub
   AI.AStar.State=ASTAR_RUNNING
 
   do while AI.AStar.oc > 0
@@ -340,7 +413,7 @@ sub AI.runAStar()
           ' Add to openList if not already there
           found=0
           for n=1 to AI.AStar.oc
-            if AI.AStar.openList(n) = nx+ny*MAP.W then found = 1 : exit for
+            if AI.AStar.openList(n)=nx+ny*MAP.W then found = 1 : exit for
           next
           if found=0 then
             inc AI.AStar.oc
@@ -352,44 +425,4 @@ sub AI.runAStar()
   loop
   AI.AStar.State=ASTAR_NOPATH
 end sub
-
-sub AI.extractPath()
-  LOCAL Integer path(2*(MAP.W+MAP.H))
-  LOCAL Integer idx,px,py,nx,ny
-
-  px=AI.AStar.gpx : py=AI.AStar.gpy : idx=0
-  do while NOT (px=AI.AStar.spx AND py=AI.AStar.spy)
-    nx=AI.AStar.predX(px,py) : ny=AI.AStar.predY(px,py)
-    path(idx  )=nx : px=nx
-    path(idx+1)=ny : py=ny
-    inc idx,2
-  loop
-  AI.Path.length=idx/2-2
-
-  for idx=0 to AI.Path.length
-    AI.Path.X(idx)=path(2*(AI.Path.length-idx))
-    AI.Path.Y(idx)=path(2*(AI.Path.length-idx)+1)
-  next
-  AI.Path.next=0
-end sub
-
-
-'(x1/y1),(x2,y2)=One line segment
-'(x3/y3),(x4,y4)=Second line segment
-function Math.intersect(x1!,y1!,x2!,y2!,x3!,y3!,x4!,y4!) as Integer
-  LOCAL Float den,ua,ub,numA,numB
-
-  den=(y4!-y3!)*(x2!-x1!) - (x4!-x3!)*(y2!-y1!)
-  if den=0 then exit function
-  
-  numA=(x4!-x3!)*(y1!-y3!) - (y4!-y3!)*(x1!-x3!)
-  numB=(x2!-x1!)*(y1!-y3!) - (y2!-y1!)*(x1!-x3!)
-  ua=numA/den : ub=numB/den
-
-  if ua>=0 and ua<=1 and ub>=0 and ub<=1 then Math.intersect=1
-[AI] if Math.intersect=1 then line x3!,y3!,x4!,y4!,1,map(7)
-end function
-
-
-
 
