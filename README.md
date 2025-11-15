@@ -5,9 +5,9 @@ hopefully balanced for most players.
 
 It is a multiplayer game for two to four players. The goal is to survive.
 You will be driving a tank in an arena and have to fight the tanks of your
-opponents. If your tank get hit, you can send in the crew to repair it and
-continue the fight. When your repair kits are use up the battle is over,
-at least for you.
+opponents. If your tank gets hit, you can send in the mechanics to repair
+it and continue the fight. When your repair kits are used-up the battle
+is over, at least for you.
 
 This game was inspired by old arcade machines and especially one I once
 fought battles against my father when I was 10 years old. It was in an

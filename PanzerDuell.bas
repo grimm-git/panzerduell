@@ -7,7 +7,7 @@ OPTION DEFAULT NONE
 #DEFINE "[DBG]","'"  'enable standard debugging output
 #DEFINE "[MAP]","'"  'enable MAP debugging
 #DEFINE "[DRN]","'"  'enable Drohne debugging
-#DEFINE "[AI]","'"   'enable AI debugging
+#DEFINE "[AI]" ,"'"  'enable AI debugging
 #DEFINE "[MAT]","'"  'enable Math debugging
 
 CONST PWD$=getParent$(MM.Info(current))
@@ -202,16 +202,7 @@ function isESC() as Integer
   if oldKey<>Key then
     oldKey=Key
     if key=27 then isESC=1 : exit function
-    if key=147 then save image "screenshot"+str$(screenshot)+".bmp":inc screenshot 'F3 for screenshot
   endif
 end function
-
-'function getWinner() as Integer
-'  LOCAL Integer player
-
-'  for player=1 to Game.NumPlayers
-'    if Player.isActive(player) then getWinner=player
-'  next
-'end function
 
 

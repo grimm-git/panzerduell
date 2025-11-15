@@ -43,6 +43,8 @@ sub Level.setTwoPanzer()
   x=Playfield.X : y=Playfield.Y : w=Playfield.W : h=Playfield.H
   Panzer.set(0,x  +75,y+h/2, 90)
   Panzer.set(1,x+w-75,y+h/2,-90)
+  Panzer.State(2)=PSTATE_NONE
+  Panzer.State(3)=PSTATE_NONE
 end sub
 
 sub Level.setThreePanzer()
@@ -52,6 +54,7 @@ sub Level.setThreePanzer()
   Panzer.set(0,x  +75,y+h/2 ,  90)
   Panzer.set(1,x+w-75,y+  75,-120)
   Panzer.set(2,x+w-75,y+h-75, -60)
+  Panzer.State(3)=PSTATE_NONE
 end sub
 
 sub Level.setFourPanzer()
